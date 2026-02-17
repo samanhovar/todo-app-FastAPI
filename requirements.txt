@@ -11,6 +11,7 @@ email-validator==2.3.0
 fastapi==0.129.0
 fastapi-cli==0.0.21
 fastapi-cloud-cli==0.12.0
+fastapi-swagger==0.4.41
 fastar==0.8.0
 greenlet==3.3.1
 h11==0.16.0
