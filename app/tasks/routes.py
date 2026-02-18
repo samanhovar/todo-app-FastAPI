@@ -8,24 +8,24 @@ from sqlalchemy.orm import Session
 from core.database import get_db
 
 
-router = APIRouter(tags=["tasks"])
+router = APIRouter(tags=["tasks"], prefix="/tasks")
 
 
 @router.get(
     "/tasks", response_model=list[TaskResponseSchema], status_code=status.HTTP_200_OK
 )
 async def retrevie_task_list(
+    db: Annotated[Session, Depends(get_db)],
     completed: Annotated[
-        bool, Query(None, description="filter tasks based on being completed or not")
-    ],
+        bool | None, Query(description="filter tasks based on being completed or not")
+    ] = None,
     limit: Annotated[
         int,
-        Query(10, gt=0, le=50, description="limiting the number of items to retrieve"),
-    ],
+        Query(gt=0, le=50, description="limiting the number of items to retrieve"),
+    ] = 10,
     offset: Annotated[
-        int, Query(0, ge=0, description="use for paginating based on passed items")
-    ],
-    db: Annotated[Session, Depends(get_db)],
+        int, Query(ge=0, description="use for paginating based on passed items")
+    ] = 0,
 ):
     query = db.query(TaskModel)
     if completed is not None:
@@ -44,7 +44,7 @@ async def retrevie_single_task_detail(
     db: Annotated[Session, Depends(get_db)],
 ):
     task_obj = db.query(TaskModel).filter_by(id=task_id).first()
-    if not task_id:
+    if not task_obj:
         raise HTTPException(status_code=404, detail="Task not found")
 
     return task_obj
@@ -99,3 +99,4 @@ async def delete_task(
         raise HTTPException(status_code=404, detail="Task not found")
     db.delete(task_obj)
     db.commit()
+    return {"message": "Task deleted successfully"}

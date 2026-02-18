@@ -9,8 +9,8 @@ class TaskBaseSchema(BaseModel):
     ]
     description: Annotated[
         str | None, Field(max_length=500, description="Description of the task")
-    ]
-    is_completed: Annotated[bool, Field(..., description="State of the task")]
+    ] = None
+    is_completed: Annotated[bool, Field(description="State of the task")] = False
 
 
 class TaskCreateSchema(TaskBaseSchema):
