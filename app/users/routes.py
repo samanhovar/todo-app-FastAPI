@@ -1,8 +1,10 @@
+from sqlalchemy.sql.operators import ge
+from websockets import route
 import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
-from users.schemas import UserLoginSchema, UserRegisterSchema
+from users.schemas import UserLoginSchema, UserRegisterSchema, UserRefreshTokenSchema
 from users.models import UserModel
 
 from typing import Annotated
@@ -12,7 +14,7 @@ from core.database import get_db
 from sqlalchemy.orm import Session
 
 # Authentication with jwt
-from auth.jwt_auth import generate_access_token, generate_refresh_token
+from auth.jwt_auth import generate_access_token, generate_refresh_token, decode_refresh_token
 
 
 router = APIRouter(tags=["users"], prefix="/users")
@@ -65,3 +67,10 @@ async def user_register(
     db.add(user_obj)
     db.commit()
     return JSONResponse({"detail": "user registered successfully"})
+
+
+@router.post("/refresh-token")
+async def user_refresh_token(request: UserRefreshTokenSchema, db: Annotated[Session, Depends(get_db)]):
+    user_id = decode_refresh_token(request.token)
+    access_token = generate_access_token(user_id)
+    return JSONResponse({"access_token": access_token})
