@@ -2,10 +2,14 @@ from fastapi import APIRouter, Path, Query, Depends, HTTPException, status
 from typing import Annotated
 from tasks.schemas import TaskCreateSchema, TaskResponseSchema, TaskUpdateSchema
 from tasks.models import TaskModel
+from users.models import UserModel
 
 # sqlalchemy imports
 from sqlalchemy.orm import Session
 from core.database import get_db
+
+# Authentication
+from auth.jwt_auth import get_authenticated_user
 
 
 router = APIRouter(tags=["tasks"], prefix="/tasks")
@@ -16,6 +20,7 @@ router = APIRouter(tags=["tasks"], prefix="/tasks")
 )
 async def retrevie_task_list(
     db: Annotated[Session, Depends(get_db)],
+    user: Annotated[UserModel, Depends(get_authenticated_user)],
     completed: Annotated[
         bool | None, Query(description="filter tasks based on being completed or not")
     ] = None,
@@ -27,7 +32,7 @@ async def retrevie_task_list(
         int, Query(ge=0, description="use for paginating based on passed items")
     ] = 0,
 ):
-    query = db.query(TaskModel)
+    query = db.query(TaskModel).filter_by(user_id=user.id)
     if completed is not None:
         query = query.filter_by(is_completed=completed)
 
@@ -42,8 +47,9 @@ async def retrevie_task_list(
 async def retrevie_single_task_detail(
     task_id: Annotated[int, Path(..., gt=0)],
     db: Annotated[Session, Depends(get_db)],
+    user: Annotated[UserModel, Depends(get_authenticated_user)],
 ):
-    task_obj = db.query(TaskModel).filter_by(id=task_id).first()
+    task_obj = db.query(TaskModel).filter_by(user_id=user.id, id=task_id).first()
     if not task_obj:
         raise HTTPException(status_code=404, detail="Task not found")
 
@@ -56,8 +62,11 @@ async def retrevie_single_task_detail(
 async def create_task(
     request: TaskCreateSchema,
     db: Annotated[Session, Depends(get_db)],
+    user: Annotated[UserModel, Depends(get_authenticated_user)],
 ):
-    task_obj = TaskModel(**request.model_dump())
+    data = request.model_dump()
+    data.update({"user_id": user.id})
+    task_obj = TaskModel(**data)
     db.add(task_obj)
     db.commit()
     db.refresh(task_obj)
@@ -74,8 +83,9 @@ async def update_task(
     request: TaskUpdateSchema,
     task_id: Annotated[int, Path(..., gt=0)],
     db: Annotated[Session, Depends(get_db)],
+    user: Annotated[UserModel, Depends(get_authenticated_user)],
 ):
-    task_obj = db.query(TaskModel).filter_by(id=task_id).first()
+    task_obj = db.query(TaskModel).filter_by(user_id=user.id, id=task_id).first()
     if not task_id:
         raise HTTPException(status_code=404, detail="Task not found")
 
@@ -93,8 +103,9 @@ async def update_task(
 async def delete_task(
     task_id: Annotated[int, Path(..., gt=0)],
     db: Annotated[Session, Depends(get_db)],
+    user: Annotated[UserModel, Depends(get_authenticated_user)],
 ):
-    task_obj = db.query(TaskModel).filter_by(id=task_id).first()
+    task_obj = db.query(TaskModel).filter_by(user_id=user.id, id=task_id).first()
     if not task_obj:
         raise HTTPException(status_code=404, detail="Task not found")
     db.delete(task_obj)

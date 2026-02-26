@@ -1,8 +1,7 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from tasks.routes import router as task_router
 from users.routes import router as user_router
-from auth.jwt_auth import get_authenticated_user
 
 
 tags_metadata = [
@@ -47,14 +46,3 @@ app = FastAPI(
 
 app.include_router(task_router)
 app.include_router(user_router)
-
-
-@app.get("/public")
-def public_route():
-    return {"message": "This is a public route."}
-
-
-@app.get("/private")
-def private_route(user = Depends(get_authenticated_user)):
-    print(user.id)
-    return {"message": "This is a private route."}
