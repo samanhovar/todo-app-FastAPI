@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from tasks.routes import router as task_router
-from users.routes import router as user_router
+from users.routes import admin_router, router as user_router
 
 
 tags_metadata = [
@@ -46,3 +46,4 @@ app = FastAPI(
 
 app.include_router(task_router)
 app.include_router(user_router)
+app.include_router(admin_router)

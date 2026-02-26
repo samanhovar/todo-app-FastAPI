@@ -1,7 +1,7 @@
 from typing import Annotated
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from users.models import UserModel
+from users.models import UserModel, UserType
 from core.database import get_db
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
@@ -17,9 +17,14 @@ def get_authenticated_user(
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
     db: Annotated[Session, Depends(get_db)],
 ):
+    if not credentials or not credentials.credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication failed, token not provided",
+        )
     token = credentials.credentials
     try:
-        decoded = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms="HS256")
+        decoded = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=["HS256"])
         user_id = decoded.get("user_id", None)
 
         if not user_id:
@@ -43,6 +48,12 @@ def get_authenticated_user(
         user_obj = db.query(UserModel).filter_by(id=user_id).one()
         return user_obj
 
+    except jwt.PyJWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication failed, invalid token",
+        )
+
     except InvalidSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -60,6 +71,18 @@ def get_authenticated_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Authentication failed, {e}",
         )
+
+
+def get_authenticated_admin(
+    user: Annotated[UserModel, Depends(get_authenticated_user)],
+):
+    if user.user_type == UserType.ADMIN:
+        return user
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Forbidden access to endpoint",
+    )
 
 
 def generate_access_token(user_id: int, expires_in: int = 60 * 5) -> str:

@@ -14,7 +14,12 @@ from core.database import get_db
 from sqlalchemy.orm import Session
 
 # Authentication with jwt
-from auth.jwt_auth import generate_access_token, generate_refresh_token, decode_refresh_token
+from auth.jwt_auth import (
+    generate_access_token,
+    generate_refresh_token,
+    decode_refresh_token,
+    get_authenticated_admin,
+)
 
 
 router = APIRouter(tags=["users"], prefix="/users")
@@ -38,7 +43,8 @@ async def user_login(
         )
     if not user_obj.verify_password(request.password):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="username or password Invalid"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="username or password Invalid",
         )
 
     # Token Based Authentication
@@ -46,11 +52,17 @@ async def user_login(
     # db.add(token_obj)
     # db.commit()
     # db.refresh(token_obj)
-    
+
     # JWT Authentication
     access_token = generate_access_token(user_obj.id)
     refresh_token = generate_refresh_token(user_obj.id)
-    return JSONResponse({"message": "logged in successfully!", "access_token": access_token, "refresh_token": refresh_token})
+    return JSONResponse(
+        {
+            "message": "logged in successfully!",
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+        }
+    )
 
 
 @router.post("/register")
@@ -70,7 +82,17 @@ async def user_register(
 
 
 @router.post("/refresh-token")
-async def user_refresh_token(request: UserRefreshTokenSchema, db: Annotated[Session, Depends(get_db)]):
+async def user_refresh_token(
+    request: UserRefreshTokenSchema, db: Annotated[Session, Depends(get_db)]
+):
     user_id = decode_refresh_token(request.token)
     access_token = generate_access_token(user_id)
     return JSONResponse({"access_token": access_token})
+
+
+admin_router = APIRouter(tags=["super-user"], prefix="/admin")
+
+
+@admin_router.get("/dashboard")
+def admin_dashboard(user: Annotated[UserModel, Depends(get_authenticated_admin)]):
+    return {"message": "Welcome to the admin dashboard!", "admin": user.username}
