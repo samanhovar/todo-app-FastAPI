@@ -11,9 +11,9 @@ class TaskModel(Base):
     description = Column(String(500), nullable=True)
     is_completed = Column(Boolean, default=False)
 
-    created_date = Column(DateTime, server_default=func.now())
-    updated_date = Column(
-        DateTime, server_default=func.now(), server_onupdate=func.now()
-    )
+    # timestamps: created_date is set once, updated_date should refresh on every update
+    # use SQLAlchemy defaults and onupdate so the value changes when the object is modified
+    created_date = Column(DateTime, default=func.now(), nullable=False)
+    updated_date = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
 
     user = relationship("UserModel", back_populates="tasks", uselist=False)

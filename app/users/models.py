@@ -42,6 +42,7 @@ class TokenModel(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     token = Column(String, unique=True, nullable=False)
-    created_date = Column(DateTime, server_default=func.now())
+    created_date = Column(DateTime, default=func.now(), nullable=False)
+    # add expire date
 
     user = relationship("UserModel", uselist=False)
